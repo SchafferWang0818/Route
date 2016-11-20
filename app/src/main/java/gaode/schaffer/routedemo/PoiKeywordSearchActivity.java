@@ -87,6 +87,8 @@ public class PoiKeywordSearchActivity extends FragmentActivity implements
         searchText = (AutoCompleteTextView) findViewById(R.id.keyWord);
         searchText.addTextChangedListener(this);// 添加文本输入框监听事件
         editCity = (EditText) findViewById(R.id.city);
+        editCity.setVisibility(View.GONE);
+        nextButton.setVisibility(View.GONE);
         aMap.setOnMarkerClickListener(this);// 添加点击marker监听事件
         aMap.setInfoWindowAdapter(this);// 添加显示infowindow监听事件
     }

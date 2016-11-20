@@ -2,26 +2,27 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/act_background" >
+    android:background="@color/act_background">
 
     <RelativeLayout
         android:id="@+id/routemap_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/title_background" >
+        android:background="@drawable/title_background">
+
         <LinearLayout
             android:id="@+id/routemap_choose"
             android:layout_width="match_parent"
             android:layout_height="44dp"
             android:background="@drawable/title_background"
             android:paddingLeft="10dp"
-            android:paddingRight="10dp" >
+            android:paddingRight="10dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:onClick="onDriveClick" >
+                android:onClick="onDriveClick">
 
                 <ImageView
                     android:id="@+id/route_drive"
@@ -29,14 +30,14 @@
                     android:layout_height="22dp"
                     android:layout_centerInParent="true"
                     android:layout_gravity="center"
-                    android:src="@drawable/route_drive_normal"/>
+                    android:src="@drawable/route_drive_normal" />
             </RelativeLayout>
 
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:onClick="onBusClick" >
+                android:onClick="onBusClick">
 
                 <ImageView
                     android:id="@+id/route_bus"
@@ -52,7 +53,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:onClick="onWalkClick" >
+                android:onClick="onWalkClick">
 
                 <ImageView
                     android:id="@+id/route_walk"
@@ -63,11 +64,12 @@
                     android:layout_weight="1"
                     android:src="@drawable/route_walk_normal" />
             </RelativeLayout>
+
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:onClick="onCrosstownBusClick" >
+                android:onClick="onCrosstownBusClick">
 
                 <TextView
                     android:id="@+id/route_CrosstownBus"
@@ -75,8 +77,8 @@
                     android:layout_height="22dp"
                     android:layout_centerInParent="true"
                     android:layout_gravity="center"
-                    android:textColor="@color/gary"
-                    android:text="跨城公交"/>
+                    android:text="跨城公交"
+                    android:textColor="@color/gary" />
             </RelativeLayout>
         </LinearLayout>
     </RelativeLayout>
@@ -86,10 +88,10 @@
         android:layout_width="match_parent"
         android:layout_height="70dp"
         android:layout_alignParentBottom="true"
-        android:padding="5dp"
         android:background="@drawable/bg_bottom_bar"
         android:gravity="center_vertical"
-        android:visibility="gone" >
+        android:padding="5dp"
+        android:visibility="gone">
 
         <TextView
             android:id="@+id/firstline"
@@ -109,8 +111,8 @@
             android:gravity="right"
             android:singleLine="true"
             android:textColor="#999999"
-            android:textSize="13sp" 
-            android:visibility="gone"/>
+            android:textSize="13sp"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/detail"
@@ -118,8 +120,8 @@
             android:layout_height="35dp"
             android:layout_alignParentRight="true"
             android:layout_marginRight="10dp"
-            android:orientation="horizontal" 
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -143,7 +145,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottom_layout"
-        android:layout_below="@id/routemap_header"/>
+        android:layout_below="@id/routemap_header" />
 
     <LinearLayout
         android:id="@+id/bus_result"
@@ -152,7 +154,7 @@
         android:layout_below="@id/routemap_header"
         android:background="@color/transparent"
         android:orientation="vertical"
-        android:visibility="gone" >
+        android:visibility="gone">
 
         <ListView
             android:id="@+id/bus_result_list"
@@ -164,36 +166,52 @@
             android:fadingEdgeLength="0dp"
             android:footerDividersEnabled="false"
             android:headerDividersEnabled="false"
-            android:listSelector="#00000000" >
-        </ListView>
+            android:listSelector="#00000000"/>
     </LinearLayout>
 
     <LinearLayout
-        android:background="@color/white"
-        android:orientation="vertical"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:layout_below="@id/routemap_header">
+        android:layout_below="@id/routemap_header"
+        android:background="@color/white"
+        android:orientation="vertical">
+
         <TextView
             android:id="@+id/start_position_tv"
             android:layout_width="match_parent"
+            android:layout_height="50dp"
             android:layout_weight="1"
-            android:text="点击设置起点"
             android:gravity="center"
-            android:layout_height="50dp" />
+            android:text="点击设置起点" />
+
         <TextView
             android:id="@+id/end_position_tv"
             android:layout_width="match_parent"
+            android:layout_height="50dp"
             android:layout_weight="1"
-            android:text="点击设置终点"
             android:gravity="center"
-            android:layout_height="50dp" />
+            android:text="点击设置终点" />
+
         <Button
-            android:onClick="getRoute"
             android:id="@+id/get_route_btn"
-            android:text="获取具体路线"
             android:layout_width="match_parent"
-            android:layout_height="50dp" />
+            android:layout_height="50dp"
+            android:onClick="getRoute"
+            android:text="获取具体路线" />
+
+        <EditText
+            android:id="@+id/price_edt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:digits="1234567890."
+            android:hint="单位公里价格"
+            android:singleLine="true" />
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="startOrStop"
+            android:text="开启/关闭行程" />
     </LinearLayout>
 
 

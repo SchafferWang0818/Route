@@ -4,22 +4,35 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.AMap.InfoWindowAdapter;
 import com.amap.api.maps.AMap.OnInfoWindowClickListener;
 import com.amap.api.maps.AMap.OnMapClickListener;
 import com.amap.api.maps.AMap.OnMarkerClickListener;
+import com.amap.api.maps.AMapUtils;
+import com.amap.api.maps.LocationSource;
 import com.amap.api.maps.MapView;
+import com.amap.api.maps.UiSettings;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
+import com.amap.api.maps.model.PolylineOptions;
 import com.amap.api.services.core.AMapException;
 import com.amap.api.services.core.LatLonPoint;
 import com.amap.api.services.route.BusRouteResult;
@@ -31,8 +44,11 @@ import com.amap.api.services.route.RouteSearch.DriveRouteQuery;
 import com.amap.api.services.route.RouteSearch.OnRouteSearchListener;
 import com.amap.api.services.route.WalkRouteResult;
 
+import java.util.ArrayList;
+import java.util.List;
 
-public class DriveRouteActivity extends Activity implements OnMapClickListener,
+
+public class DriveRouteActivity extends Activity implements LocationSource, AMap.OnMapLoadedListener, OnMapClickListener,
         OnMarkerClickListener, OnInfoWindowClickListener, InfoWindowAdapter, OnRouteSearchListener, OnClickListener {
     private AMap aMap;
     private MapView mapView;
@@ -51,6 +67,53 @@ public class DriveRouteActivity extends Activity implements OnMapClickListener,
     private ProgressDialog progDialog = null;// 搜索时进度条
     private TextView mTvSetStartPosition;
     private TextView mTvSetEndPosition;
+    List<LatLng> locations = new ArrayList<>();
+    boolean isFirst = true;
+    //声明AMapLocationClient类对象
+    public AMapLocationClient mLocationClient = null;
+    //声明定位回调监听器
+    public AMapLocationListener mLocationListener = new AMapLocationListener() {
+        @Override
+        public void onLocationChanged(AMapLocation aMapLocation) {
+            if (listener != null) {
+                listener.onLocationChanged(aMapLocation);
+                //显示位置
+            }
+            if (aMapLocation != null) {
+                if (aMapLocation.getErrorCode() == 0) {
+                    //可在其中解析amapLocation获取相应内容。
+                    double longitude = aMapLocation.getLongitude();//获取经度
+                    double latitude = aMapLocation.getLatitude();//获取纬度
+//                    Log.w("TAG", Thread.currentThread().getName());
+                    if (isFirst) {
+                        isFirst = false;
+                        mTvSetStartPosition.setText("当前位置");
+                        mStartPoint = new LatLonPoint(latitude, longitude);
+                        aMap.addMarker(new MarkerOptions()
+                                .position(AMapUtil.convertToLatLng(mStartPoint))
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.start)));
+                    }
+                    if (hasStarted) {
+                        LatLng latLng = new LatLng(latitude, longitude);
+                        locations.add(latLng);
+                        //绘制轨迹?
+                        aMap.addPolyline(new PolylineOptions().addAll(locations).width(10).color(Color.RED));
+                    }
+                } else {
+                    //定位失败时，可通过ErrCode（错误码）信息来确定失败的原因，errInfo是错误信息，详见错误码表。
+                    Log.e("AmapError", "location Error, ErrCode:"
+                            + aMapLocation.getErrorCode() + ", errInfo:"
+                            + aMapLocation.getErrorInfo());
+                }
+            }
+        }
+    };
+    //配置发起定位的模式和相关参数
+    private AMapLocationClientOption mLocationOption;
+    private UiSettings uiSettings;
+    private OnLocationChangedListener listener;
+    private float route;
+    private EditText mPriceEdt;
 
     @Override
     protected void onCreate(Bundle bundle) {
@@ -61,15 +124,11 @@ public class DriveRouteActivity extends Activity implements OnMapClickListener,
         mapView = (MapView) findViewById(R.id.route_map);
         mapView.onCreate(bundle);// 此方法必须重写
         init();
-    }
-
-    private void setfromandtoMarker() {
-
-        aMap.addMarker(new MarkerOptions()
-                .position(AMapUtil.convertToLatLng(mStartPoint))
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.start)));
-
-
+        uiSettings = aMap.getUiSettings();
+        aMap.setLocationSource(this);
+        aMap.setMyLocationEnabled(true);
+        uiSettings.setMyLocationButtonEnabled(true);
+        mLocationClient.startLocation();
     }
 
     /**
@@ -78,6 +137,8 @@ public class DriveRouteActivity extends Activity implements OnMapClickListener,
     private void init() {
         if (aMap == null) {
             aMap = mapView.getMap();
+            aMap.setOnMapLoadedListener(this);
+            initLocationConfiguration();
         }
         registerListener();
         mRouteSearch = new RouteSearch(this);
@@ -88,9 +149,35 @@ public class DriveRouteActivity extends Activity implements OnMapClickListener,
         mRouteDetailDes = (TextView) findViewById(R.id.secondline);
         mTvSetStartPosition = (TextView) findViewById(R.id.start_position_tv);
         mTvSetEndPosition = (TextView) findViewById(R.id.end_position_tv);
+        mPriceEdt = (EditText) findViewById(R.id.price_edt);
         mTvSetStartPosition.setOnClickListener(this);
         mTvSetEndPosition.setOnClickListener(this);
         mHeadLayout.setVisibility(View.GONE);
+    }
+
+    private void initLocationConfiguration() {
+        //初始化定位
+        mLocationClient = new AMapLocationClient(this);
+        //设置定位回调监听
+        mLocationClient.setLocationListener(mLocationListener);
+        //初始化AMapLocationClientOption对象
+        mLocationOption = new AMapLocationClientOption();
+        //设置定位模式为AMapLocationMode.Hight_Accuracy，高精度模式。
+        mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+        //设置定位间隔,单位毫秒,默认为2000ms，最低1000ms。
+        mLocationOption.setInterval(2000);
+        //设置是否返回地址信息（默认返回地址信息）
+        mLocationOption.setNeedAddress(true);
+        //设置是否强制刷新WIFI，默认为true，强制刷新。
+        mLocationOption.setWifiActiveScan(false);
+        //设置是否允许模拟位置,默认为false，不允许模拟位置
+        mLocationOption.setMockEnable(false);
+        //设置是否允许模拟位置,默认为false，不允许模拟位置
+        mLocationOption.setMockEnable(false);
+        //单位是毫秒，默认30000毫秒，建议超时时间不要低于8000毫秒。
+        mLocationOption.setHttpTimeOut(20000);
+        //给定位客户端对象设置定位参数
+        mLocationClient.setLocationOption(mLocationOption);
     }
 
     /**
@@ -257,6 +344,7 @@ public class DriveRouteActivity extends Activity implements OnMapClickListener,
     protected void onPause() {
         super.onPause();
         mapView.onPause();
+        deactivate();
     }
 
     /**
@@ -275,6 +363,8 @@ public class DriveRouteActivity extends Activity implements OnMapClickListener,
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
+        mLocationClient = null;
+        listener = null;
     }
 
     @Override
@@ -332,6 +422,69 @@ public class DriveRouteActivity extends Activity implements OnMapClickListener,
                     .position(AMapUtil.convertToLatLng(mEndPoint))
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.end)));
         }
+    }
+
+    @Override
+    public void onMapLoaded() {
+
+    }
+
+    @Override
+    public void activate(OnLocationChangedListener onLocationChangedListener) {
+        if (listener == null)
+            listener = onLocationChangedListener;
+    }
+
+    @Override
+    public void deactivate() {
+        if (mLocationClient != null) {
+            mLocationClient.stopLocation();
+//            mLocationClient = null;
+//            listener = null;
+        }
+    }
+
+    public void startRecord(View view) {
+        if (mLocationClient != null) {
+            mLocationClient.startLocation();
+            locations.clear();
+            mPriceEdt.setEnabled(false);
+        }
+    }
+
+    public void endRecord(View view) {
+
+        if (mLocationClient != null) {
+            mPriceEdt.setEnabled(true);
+            mLocationClient.stopLocation();
+            route = 0f;
+            for (int i = 0; i < locations.size() - 1; i++) {
+                route += AMapUtils.calculateLineDistance(locations.get(i), locations.get(i + 1));
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("行走的路程为").append((long) route).append("m");
+            if (!TextUtils.isEmpty(mPriceEdt.getText().toString())) {
+                Log.w("TAG", route + "-" + Float.parseFloat(mPriceEdt.getText().toString()));
+                float money = (long) route * Float.parseFloat(mPriceEdt.getText().toString()) / 1000f;
+                sb.append(",需要").append(money).append("元");
+            }
+            Toast.makeText(this, sb.toString(), Toast.LENGTH_SHORT).show();
+            locations.clear();
+        }
+    }
+
+    public boolean hasStarted = false;
+
+    public void startOrStop(View view) {
+        Log.w("TAG", "是否为空" + (mLocationClient == null));
+        if (!hasStarted) {
+            startRecord(view);
+            hasStarted = true;
+        } else {
+            endRecord(view);
+            hasStarted = false;
+        }
+        Log.w("TAG", "当前是否开始-->" + hasStarted);
     }
 }
 
