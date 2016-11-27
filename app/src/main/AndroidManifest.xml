@@ -29,14 +29,16 @@
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.amap.api.v2.apikey"
-            android:value="722ced99115fccec3c914a1334f1ed8e" />
+            android:value="547342fbc198db2866684290de1c26a7" />
 
         <activity android:name=".PoiKeywordSearchActivity">
 
         </activity>
 
         <activity android:name=".DriveRouteDetailActivity" />
-        <activity android:name=".DriveRouteActivity" >
+        <activity
+            android:name=".DriveRouteActivity"
+            android:hardwareAccelerated="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

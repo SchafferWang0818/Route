@@ -6,14 +6,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
@@ -44,6 +44,7 @@ import com.amap.api.services.route.RouteSearch.DriveRouteQuery;
 import com.amap.api.services.route.RouteSearch.OnRouteSearchListener;
 import com.amap.api.services.route.WalkRouteResult;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,8 +113,10 @@ public class DriveRouteActivity extends Activity implements LocationSource, AMap
     private AMapLocationClientOption mLocationOption;
     private UiSettings uiSettings;
     private OnLocationChangedListener listener;
-    private float route;
+    private float route = 0f;
     private EditText mPriceEdt;
+    private TextView moneyTv;
+    private EditText edtTime;
 
     @Override
     protected void onCreate(Bundle bundle) {
@@ -153,6 +156,9 @@ public class DriveRouteActivity extends Activity implements LocationSource, AMap
         mTvSetStartPosition.setOnClickListener(this);
         mTvSetEndPosition.setOnClickListener(this);
         mHeadLayout.setVisibility(View.GONE);
+        edtTime = (EditText) findViewById(R.id.price_edt_time);
+        moneyTv = (TextView) findViewById(R.id.money);
+        moneyTv.setText("0m\n￥0.00");
     }
 
     private void initLocationConfiguration() {
@@ -365,6 +371,7 @@ public class DriveRouteActivity extends Activity implements LocationSource, AMap
         mapView.onDestroy();
         mLocationClient = null;
         listener = null;
+        handler.removeCallbacksAndMessages(null);
     }
 
     @Override
@@ -449,6 +456,7 @@ public class DriveRouteActivity extends Activity implements LocationSource, AMap
             mLocationClient.startLocation();
             locations.clear();
             mPriceEdt.setEnabled(false);
+            edtTime.setEnabled(false);
         }
     }
 
@@ -456,20 +464,22 @@ public class DriveRouteActivity extends Activity implements LocationSource, AMap
 
         if (mLocationClient != null) {
             mPriceEdt.setEnabled(true);
+            edtTime.setEnabled(true);
             mLocationClient.stopLocation();
-            route = 0f;
-            for (int i = 0; i < locations.size() - 1; i++) {
-                route += AMapUtils.calculateLineDistance(locations.get(i), locations.get(i + 1));
-            }
-            StringBuilder sb = new StringBuilder();
-            sb.append("行走的路程为").append((long) route).append("m");
-            if (!TextUtils.isEmpty(mPriceEdt.getText().toString())) {
-                Log.w("TAG", route + "-" + Float.parseFloat(mPriceEdt.getText().toString()));
-                float money = (long) route * Float.parseFloat(mPriceEdt.getText().toString()) / 1000f;
-                sb.append(",需要").append(money).append("元");
-            }
-            Toast.makeText(this, sb.toString(), Toast.LENGTH_SHORT).show();
-            locations.clear();
+//            route = 0f;
+//            for (int i = 0; i < locations.size() - 1; i++) {
+//                route += AMapUtils.calculateLineDistance(locations.get(i), locations.get(i + 1));
+//            }
+//            StringBuilder sb = new StringBuilder();
+//            sb.append("行走的路程为").append((long) route).append("m");
+//            if (!TextUtils.isEmpty(mPriceEdt.getText().toString())) {
+//                Log.w("TAG", route + "-" + Float.parseFloat(mPriceEdt.getText().toString()));
+//                float money = (long) route * Float.parseFloat(mPriceEdt.getText().toString()) / 1000f;
+//                sb.append(",需要").append(money).append("元");
+//            }
+//            Toast.makeText(this, sb.toString(), Toast.LENGTH_SHORT).show();
+
+//            locations.clear();
         }
     }
 
@@ -480,11 +490,51 @@ public class DriveRouteActivity extends Activity implements LocationSource, AMap
         if (!hasStarted) {
             startRecord(view);
             hasStarted = true;
+            new Thread(new MyRunnable()).start();
         } else {
             endRecord(view);
             hasStarted = false;
         }
         Log.w("TAG", "当前是否开始-->" + hasStarted);
     }
+
+    double mMoney = 0;
+
+    class MyRunnable implements Runnable {
+
+        @Override
+        public void run() {
+            while (true) {
+                if (!hasStarted) {
+                    return;
+                }
+                try {
+                    Thread.sleep(30 * 1000);
+//                    route = 0f;
+                    for (int i = 0; i < locations.size() - 1; i++) {
+                        route += AMapUtils.calculateLineDistance(locations.get(i), locations.get(i + 1));
+                    }
+                    //每半分钟增长的值 = 每一千米的价格+半分钟的价格
+                    mMoney += route / 1000 * Double.parseDouble(mPriceEdt.getText().toString()) + Double.parseDouble(edtTime.getText().toString()) * 0.5;
+                    handler.sendEmptyMessage(100);
+                    locations.clear();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
+    }
+
+    Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            DecimalFormat df1 = new DecimalFormat("###.##");
+            DecimalFormat df2 = new DecimalFormat("##.###");
+            moneyTv.setText(df2.format(route / 1000) + "km\n￥" + df1.format(mMoney));
+        }
+    };
+
 }
 
